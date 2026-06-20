@@ -416,6 +416,14 @@
       font-weight: 760;
     }
 
+    .noteText a {
+      color: var(--coral-blue);
+      font-weight: 900;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      overflow-wrap: anywhere;
+    }
+
     .noteMeta {
       display: flex;
       flex-wrap: wrap;
@@ -1042,7 +1050,7 @@
           <button class="toolBtn" type="button" data-action="delete">削除</button>
         </div>
       `;
-      article.querySelector(".noteText").textContent = note.text;
+      renderLinkedText(article.querySelector(".noteText"), note.text);
       article.addEventListener("dragstart", () => {
         state.draggedId = note.id;
       });
@@ -1062,6 +1070,24 @@
       article.querySelector('[data-action="warehouse"]').addEventListener("click", () => saveNote({ ...note, layer: "warehouse" }));
       article.querySelector('[data-action="delete"]').addEventListener("click", () => deleteNote(note.id));
       return article;
+    }
+
+    function renderLinkedText(element, text) {
+      element.textContent = "";
+      const pattern = /(https?:\/\/[^\s]+)/g;
+      let lastIndex = 0;
+      String(text || "").replace(pattern, (url, _match, offset) => {
+        element.append(document.createTextNode(String(text).slice(lastIndex, offset)));
+        const link = document.createElement("a");
+        link.href = url;
+        link.textContent = url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        element.append(link);
+        lastIndex = offset + url.length;
+        return url;
+      });
+      element.append(document.createTextNode(String(text || "").slice(lastIndex)));
     }
 
     function updateStats() {
@@ -1100,7 +1126,7 @@
             <button class="toolBtn" type="button" data-action="delete">削除</button>
           </div>
         `;
-        row.querySelector(".noteText").textContent = note.text;
+        renderLinkedText(row.querySelector(".noteText"), note.text);
         row.querySelector('[data-action="restore"]').addEventListener("click", () => saveNote({ ...note, done: false }));
         row.querySelector('[data-action="delete"]').addEventListener("click", () => deleteNote(note.id));
         list.append(row);
@@ -1146,7 +1172,7 @@
             <button class="toolBtn primaryAction" type="button" data-action="act">行動</button>
           </div>
         `;
-        row.querySelector(".noteText").textContent = note.text;
+        renderLinkedText(row.querySelector(".noteText"), note.text);
         row.querySelector('[data-action="delete"]').addEventListener("click", () => {
           state.reviewResults.set(note.id, { note, type: "Delete" });
           renderReviewList(false);
