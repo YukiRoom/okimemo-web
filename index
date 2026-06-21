@@ -1241,6 +1241,12 @@
           renderReviewList(false);
           await saveNote(next);
         });
+        row.querySelector('[data-action="warehouse"]').addEventListener("click", async () => {
+          const next = { ...currentNote, layer: "warehouse", done: false };
+          state.reviewResults.set(note.id, { note: next, type: "Warehouse" });
+          renderReviewList(false);
+          await saveNote(next);
+        });
         row.querySelector('[data-action="complete"]').addEventListener("click", async () => {
           const next = { ...currentNote, done: true };
           state.reviewResults.set(note.id, { note: next, type: "Complete" });
@@ -1495,17 +1501,24 @@
 
     document.querySelectorAll(".modeBtn").forEach(button => {
       button.addEventListener("click", () => {
-        state.mode = button.dataset.mode;
+        const nextMode = button.dataset.mode;
+        if (nextMode === "review") {
+          openReviewDialog();
+          return;
+        }
+        state.mode = nextMode;
         document.querySelectorAll(".modeBtn").forEach(item => {
           item.setAttribute("aria-pressed", String(item === button));
         });
         render();
-        if (state.mode === "review") openReviewDialog();
       });
     });
 
     function openReviewDialog() {
       state.reviewResults.clear();
+      document.querySelectorAll(".modeBtn").forEach(item => {
+        item.setAttribute("aria-pressed", String(item.dataset.mode === "review"));
+      });
       renderReviewList();
       if (!reviewDialog.open) reviewDialog.showModal();
     }
