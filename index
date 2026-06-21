@@ -526,9 +526,20 @@
       border-color: rgba(93, 116, 128, .22);
     }
 
-    .listItem.reviewDoneAct {
+    .listItem.reviewDoneAct,
+    .listItem.reviewDoneToday {
       background: rgba(14, 159, 172, .12);
       border-color: rgba(14, 159, 172, .22);
+    }
+
+    .listItem.reviewDoneSoon {
+      background: rgba(255, 240, 184, .45);
+      border-color: rgba(190, 142, 20, .24);
+    }
+
+    .listItem.reviewDoneComplete {
+      background: rgba(66, 148, 96, .13);
+      border-color: rgba(66, 148, 96, .24);
     }
 
     dialog {
@@ -1141,18 +1152,23 @@
       document.querySelector("#reviewIdea").textContent = open.filter(note => note.kind === "idea").length;
       list.innerHTML = "";
 
-      const reviewItems = open;
+      const reviewMap = new Map(open.map(note => [note.id, note]));
+      state.reviewResults.forEach((result, id) => {
+        if (!reviewMap.has(id)) reviewMap.set(id, result.note);
+      });
+      const reviewItems = Array.from(reviewMap.values());
 
       if (!reviewItems.length) {
         const empty = document.createElement("div");
         empty.className = "empty";
-        empty.textContent = "残っている付箋はありません";
+        empty.textContent = "?????????????";
         list.append(empty);
         return;
       }
 
       reviewItems.forEach(note => {
         const result = state.reviewResults.get(note.id);
+        const currentNote = state.notes.find(item => item.id === note.id) || note;
         const row = document.createElement("div");
         row.className = "listItem";
         if (result) {
@@ -1162,30 +1178,46 @@
           <div>
             <div class="noteText"></div>
             <div class="noteMeta">
-              <span class="badge">${kindLabel[note.kind]}</span>
-              <span class="badge">${layerLabel[note.layer]}</span>
+              <span class="badge">${kindLabel[currentNote.kind] || kindLabel[note.kind]}</span>
+              <span class="badge">${layerLabel[currentNote.layer] || layerLabel[note.layer]}</span>
             </div>
           </div>
           <div class="noteTools">
-            <button class="toolBtn" type="button" data-action="delete">削除</button>
-            <button class="toolBtn" type="button" data-action="hold">保留</button>
-            <button class="toolBtn primaryAction" type="button" data-action="act">行動</button>
+            <button class="toolBtn" type="button" data-action="delete">??</button>
+            <button class="toolBtn" type="button" data-action="hold">??</button>
+            <button class="toolBtn primaryAction" type="button" data-action="today">??</button>
+            <button class="toolBtn" type="button" data-action="soon">??</button>
+            <button class="toolBtn" type="button" data-action="complete">??</button>
           </div>
         `;
-        renderLinkedText(row.querySelector(".noteText"), note.text);
+        renderLinkedText(row.querySelector(".noteText"), currentNote.text || note.text);
         row.querySelector('[data-action="delete"]').addEventListener("click", () => {
-          state.reviewResults.set(note.id, { note, type: "Delete" });
+          state.reviewResults.set(note.id, { note: currentNote, type: "Delete" });
           renderReviewList(false);
         });
         row.querySelector('[data-action="hold"]').addEventListener("click", async () => {
-          state.reviewResults.set(note.id, { note: { ...note, layer: "outside" }, type: "Hold" });
+          const next = { ...currentNote, done: false };
+          state.reviewResults.set(note.id, { note: next, type: "Hold" });
           renderReviewList(false);
-          await saveNote({ ...note, layer: "outside" });
+          await saveNote(next);
         });
-        row.querySelector('[data-action="act"]').addEventListener("click", async () => {
-          state.reviewResults.set(note.id, { note: { ...note, kind: "action", layer: "today" }, type: "Act" });
+        row.querySelector('[data-action="today"]').addEventListener("click", async () => {
+          const next = { ...currentNote, kind: "action", layer: "today", done: false };
+          state.reviewResults.set(note.id, { note: next, type: "Today" });
           renderReviewList(false);
-          await saveNote({ ...note, kind: "action", layer: "today", done: false });
+          await saveNote(next);
+        });
+        row.querySelector('[data-action="soon"]').addEventListener("click", async () => {
+          const next = { ...currentNote, kind: "action", layer: "soon", done: false };
+          state.reviewResults.set(note.id, { note: next, type: "Soon" });
+          renderReviewList(false);
+          await saveNote(next);
+        });
+        row.querySelector('[data-action="complete"]').addEventListener("click", async () => {
+          const next = { ...currentNote, done: true };
+          state.reviewResults.set(note.id, { note: next, type: "Complete" });
+          renderReviewList(false);
+          await saveNote(next);
         });
         list.append(row);
       });
