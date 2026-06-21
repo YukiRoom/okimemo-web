@@ -456,6 +456,12 @@
       color: #fff;
     }
 
+    .locationBadge {
+      background: rgba(14,159,172,.14);
+      border-color: rgba(14,159,172,.25);
+      color: var(--coral-blue);
+    }
+
     .tiny {
       width: 30px;
       height: 30px;
@@ -1178,8 +1184,8 @@
           <div>
             <div class="noteText"></div>
             <div class="noteMeta">
-              <span class="badge">${kindLabel[currentNote.kind] || kindLabel[note.kind]}</span>
-              <span class="badge">${layerLabel[currentNote.layer] || layerLabel[note.layer]}</span>
+              <span class="badge locationBadge">現在: ${layerLabel[currentNote.layer] || layerLabel[note.layer]}</span>
+              <span class="badge">種類: ${kindLabel[currentNote.kind] || kindLabel[note.kind]}</span>
             </div>
           </div>
           <div class="noteTools">
