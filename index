@@ -1161,7 +1161,7 @@
       if (!reviewItems.length) {
         const empty = document.createElement("div");
         empty.className = "empty";
-        empty.textContent = "?????????????";
+        empty.textContent = "今日から7日以内の予定はありません";
         list.append(empty);
         return;
       }
@@ -1183,11 +1183,11 @@
             </div>
           </div>
           <div class="noteTools">
-            <button class="toolBtn" type="button" data-action="delete">??</button>
-            <button class="toolBtn" type="button" data-action="hold">??</button>
-            <button class="toolBtn primaryAction" type="button" data-action="today">??</button>
-            <button class="toolBtn" type="button" data-action="soon">??</button>
-            <button class="toolBtn" type="button" data-action="complete">??</button>
+            <button class="toolBtn" type="button" data-action="delete">削除</button>
+            <button class="toolBtn" type="button" data-action="hold">保留</button>
+            <button class="toolBtn primaryAction" type="button" data-action="today">今日</button>
+            <button class="toolBtn" type="button" data-action="soon">近日</button>
+            <button class="toolBtn" type="button" data-action="complete">完了</button>
           </div>
         `;
         renderLinkedText(row.querySelector(".noteText"), currentNote.text || note.text);
