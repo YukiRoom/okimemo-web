@@ -352,9 +352,12 @@
       background: rgba(255,255,255,.32);
     }
 
+    .dropzone[data-layer="today"],
+    .dropzone[data-layer="soon"],
     .dropzone[data-layer="outside"] {
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
 
     .note {
       position: relative;
@@ -548,6 +551,11 @@
       border-color: rgba(66, 148, 96, .24);
     }
 
+    .listItem.reviewDoneWarehouse {
+      background: rgba(124, 104, 160, .13);
+      border-color: rgba(124, 104, 160, .24);
+    }
+
     dialog {
       border: 0;
       border-radius: 8px;
@@ -580,6 +588,14 @@
       color: var(--muted);
       font-weight: 800;
       font-size: 13px;
+    }
+
+    @media (max-width: 760px) {
+      .dropzone[data-layer="today"],
+      .dropzone[data-layer="soon"],
+      .dropzone[data-layer="outside"] {
+        grid-template-columns: 1fr;
+      }
     }
 
     @media (max-width: 920px) {
@@ -1167,7 +1183,7 @@
       if (!reviewItems.length) {
         const empty = document.createElement("div");
         empty.className = "empty";
-        empty.textContent = "今日から7日以内の予定はありません";
+        empty.textContent = "残っている付箋はありません";
         list.append(empty);
         return;
       }
@@ -1216,6 +1232,12 @@
         row.querySelector('[data-action="soon"]').addEventListener("click", async () => {
           const next = { ...currentNote, kind: "action", layer: "soon", done: false };
           state.reviewResults.set(note.id, { note: next, type: "Soon" });
+          renderReviewList(false);
+          await saveNote(next);
+        });
+        row.querySelector('[data-action="warehouse"]').addEventListener("click", async () => {
+          const next = { ...currentNote, layer: "warehouse", done: false };
+          state.reviewResults.set(note.id, { note: next, type: "Warehouse" });
           renderReviewList(false);
           await saveNote(next);
         });
@@ -1478,15 +1500,22 @@
           item.setAttribute("aria-pressed", String(item === button));
         });
         render();
-        if (state.mode === "review") {
-          state.reviewResults.clear();
-          renderReviewList();
-          reviewDialog.showModal();
-        }
+        if (state.mode === "review") openReviewDialog();
       });
     });
 
+    function openReviewDialog() {
+      state.reviewResults.clear();
+      renderReviewList();
+      if (!reviewDialog.open) reviewDialog.showModal();
+    }
+
     document.querySelector("#closeReview").addEventListener("click", () => {
+      closeReviewDialog();
+    });
+
+    reviewDialog.addEventListener("cancel", event => {
+      event.preventDefault();
       closeReviewDialog();
     });
 
