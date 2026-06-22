@@ -353,9 +353,8 @@
     }
 
     .dropzone[data-layer="outside"] {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
     }
-
 
     .note {
       position: relative;
@@ -457,12 +456,6 @@
       color: #fff;
     }
 
-    .locationBadge {
-      background: rgba(14,159,172,.14);
-      border-color: rgba(14,159,172,.25);
-      color: var(--coral-blue);
-    }
-
     .tiny {
       width: 30px;
       height: 30px;
@@ -519,21 +512,6 @@
       background: rgba(255,255,255,.52);
     }
 
-    #reviewList .noteText {
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      white-space: normal;
-      line-height: 1.45;
-      font-size: 14px;
-    }
-
-    #reviewList .noteMeta {
-      margin-top: 6px;
-      justify-content: flex-start;
-    }
-
     .listItem.reviewDone {
       opacity: .86;
     }
@@ -562,11 +540,6 @@
     .listItem.reviewDoneComplete {
       background: rgba(66, 148, 96, .13);
       border-color: rgba(66, 148, 96, .24);
-    }
-
-    .listItem.reviewDoneWarehouse {
-      background: rgba(124, 104, 160, .13);
-      border-color: rgba(124, 104, 160, .24);
     }
 
     dialog {
@@ -601,14 +574,6 @@
       color: var(--muted);
       font-weight: 800;
       font-size: 13px;
-    }
-
-    @media (max-width: 760px) {
-      .dropzone[data-layer="today"],
-      .dropzone[data-layer="soon"],
-      .dropzone[data-layer="outside"] {
-        grid-template-columns: 1fr;
-      }
     }
 
     @media (max-width: 920px) {
@@ -1075,27 +1040,10 @@
       article.draggable = true;
       article.dataset.kind = note.kind;
       article.classList.toggle("important", Boolean(note.important));
-      const isCollapsed = state.collapsed.has(note.id);
-      const compactCollapsed = isCollapsed && ["outside", "memo"].includes(note.layer);
-      article.classList.toggle("collapsed", isCollapsed);
+      article.classList.toggle("collapsed", state.collapsed.has(note.id));
       article.classList.toggle("done", Boolean(note.done));
       const deadlineText = formatDeadline(note.deadline);
       const deadlineState = getDeadlineState(note.deadline);
-      const tools = compactCollapsed
-        ? `
-          <button class="toolBtn" type="button" data-action="collapse">広げる</button>
-          <button class="toolBtn" type="button" data-action="edit">編集</button>
-          <button class="toolBtn" type="button" data-action="warehouse">倉庫へ</button>
-        `
-        : `
-          <button class="toolBtn primaryAction" type="button" data-action="done">${note.done ? "戻す" : "完了"}</button>
-          <button class="toolBtn" type="button" data-action="important">重要</button>
-          <button class="toolBtn" type="button" data-action="collapse">${isCollapsed ? "広げる" : "折りたたむ"}</button>
-          <button class="toolBtn" type="button" data-action="edit">編集</button>
-          <button class="toolBtn" type="button" data-action="today">今日へ</button>
-          <button class="toolBtn" type="button" data-action="warehouse">倉庫へ</button>
-          <button class="toolBtn" type="button" data-action="delete">削除</button>
-        `;
       article.innerHTML = `
         <div class="noteText"></div>
         <div class="noteMeta">
@@ -1103,7 +1051,15 @@
           <span class="badge">${layerLabel[note.layer]}</span>
           ${deadlineText ? `<span class="badge deadlineBadge ${deadlineState}">${deadlineText}</span>` : ""}
         </div>
-        <div class="noteTools">${tools}</div>
+        <div class="noteTools">
+          <button class="toolBtn primaryAction" type="button" data-action="done">${note.done ? "戻す" : "完了"}</button>
+          <button class="toolBtn" type="button" data-action="important">重要</button>
+          <button class="toolBtn" type="button" data-action="collapse">${state.collapsed.has(note.id) ? "広げる" : "折りたたむ"}</button>
+          <button class="toolBtn" type="button" data-action="edit">編集</button>
+          <button class="toolBtn" type="button" data-action="today">今日へ</button>
+          <button class="toolBtn" type="button" data-action="warehouse">倉庫へ</button>
+          <button class="toolBtn" type="button" data-action="delete">削除</button>
+        </div>
       `;
       renderLinkedText(article.querySelector(".noteText"), note.text);
       article.addEventListener("dragstart", () => {
@@ -1112,26 +1068,37 @@
       article.addEventListener("dragend", () => {
         state.draggedId = null;
       });
-      const doneBtn = article.querySelector('[data-action="done"]');
-      if (doneBtn) doneBtn.addEventListener("click", () => saveNote({ ...note, done: !note.done }));
-      const importantBtn = article.querySelector('[data-action="important"]');
-      if (importantBtn) importantBtn.addEventListener("click", () => saveNote({ ...note, important: !note.important }));
-      const collapseBtn = article.querySelector('[data-action="collapse"]');
-      if (collapseBtn) collapseBtn.addEventListener("click", () => {
+      article.querySelector('[data-action="done"]').addEventListener("click", () => saveNote({ ...note, done: !note.done }));
+      article.querySelector('[data-action="important"]').addEventListener("click", () => saveNote({ ...note, important: !note.important }));
+      article.querySelector('[data-action="collapse"]').addEventListener("click", () => {
         if (state.collapsed.has(note.id)) state.collapsed.delete(note.id);
         else state.collapsed.add(note.id);
         saveCollapsedNotes();
         render();
       });
-      const editBtn = article.querySelector('[data-action="edit"]');
-      if (editBtn) editBtn.addEventListener("click", () => openEdit(note));
-      const todayBtn = article.querySelector('[data-action="today"]');
-      if (todayBtn) todayBtn.addEventListener("click", () => saveNote({ ...note, layer: "today", kind: "action" }));
-      const warehouseBtn = article.querySelector('[data-action="warehouse"]');
-      if (warehouseBtn) warehouseBtn.addEventListener("click", () => saveNote({ ...note, layer: "warehouse" }));
-      const deleteBtn = article.querySelector('[data-action="delete"]');
-      if (deleteBtn) deleteBtn.addEventListener("click", () => deleteNote(note.id));
+      article.querySelector('[data-action="edit"]').addEventListener("click", () => openEdit(note));
+      article.querySelector('[data-action="today"]').addEventListener("click", () => saveNote({ ...note, layer: "today", kind: "action" }));
+      article.querySelector('[data-action="warehouse"]').addEventListener("click", () => saveNote({ ...note, layer: "warehouse" }));
+      article.querySelector('[data-action="delete"]').addEventListener("click", () => deleteNote(note.id));
       return article;
+    }
+
+    function renderLinkedText(element, text) {
+      element.textContent = "";
+      const pattern = /(https?:\/\/[^\s]+)/g;
+      let lastIndex = 0;
+      String(text || "").replace(pattern, (url, _match, offset) => {
+        element.append(document.createTextNode(String(text).slice(lastIndex, offset)));
+        const link = document.createElement("a");
+        link.href = url;
+        link.textContent = url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        element.append(link);
+        lastIndex = offset + url.length;
+        return url;
+      });
+      element.append(document.createTextNode(String(text || "").slice(lastIndex)));
     }
 
     function updateStats() {
@@ -1194,7 +1161,7 @@
       if (!reviewItems.length) {
         const empty = document.createElement("div");
         empty.className = "empty";
-        empty.textContent = "残っている付箋はありません";
+        empty.textContent = "?????????????";
         list.append(empty);
         return;
       }
@@ -1211,16 +1178,16 @@
           <div>
             <div class="noteText"></div>
             <div class="noteMeta">
-              <span class="badge locationBadge">現在: ${layerLabel[currentNote.layer] || layerLabel[note.layer]}</span>
-              <span class="badge">種類: ${kindLabel[currentNote.kind] || kindLabel[note.kind]}</span>
+              <span class="badge">${kindLabel[currentNote.kind] || kindLabel[note.kind]}</span>
+              <span class="badge">${layerLabel[currentNote.layer] || layerLabel[note.layer]}</span>
             </div>
           </div>
           <div class="noteTools">
-            <button class="toolBtn" type="button" data-action="delete">削除</button>
-            <button class="toolBtn" type="button" data-action="hold">保留</button>
-            <button class="toolBtn primaryAction" type="button" data-action="today">今日</button>
-            <button class="toolBtn" type="button" data-action="soon">近日</button>
-            <button class="toolBtn" type="button" data-action="complete">完了</button>
+            <button class="toolBtn" type="button" data-action="delete">??</button>
+            <button class="toolBtn" type="button" data-action="hold">??</button>
+            <button class="toolBtn primaryAction" type="button" data-action="today">??</button>
+            <button class="toolBtn" type="button" data-action="soon">??</button>
+            <button class="toolBtn" type="button" data-action="complete">??</button>
           </div>
         `;
         renderLinkedText(row.querySelector(".noteText"), currentNote.text || note.text);
@@ -1243,18 +1210,6 @@
         row.querySelector('[data-action="soon"]').addEventListener("click", async () => {
           const next = { ...currentNote, kind: "action", layer: "soon", done: false };
           state.reviewResults.set(note.id, { note: next, type: "Soon" });
-          renderReviewList(false);
-          await saveNote(next);
-        });
-        row.querySelector('[data-action="warehouse"]').addEventListener("click", async () => {
-          const next = { ...currentNote, layer: "warehouse", done: false };
-          state.reviewResults.set(note.id, { note: next, type: "Warehouse" });
-          renderReviewList(false);
-          await saveNote(next);
-        });
-        row.querySelector('[data-action="warehouse"]').addEventListener("click", async () => {
-          const next = { ...currentNote, layer: "warehouse", done: false };
-          state.reviewResults.set(note.id, { note: next, type: "Warehouse" });
           renderReviewList(false);
           await saveNote(next);
         });
@@ -1512,34 +1467,20 @@
 
     document.querySelectorAll(".modeBtn").forEach(button => {
       button.addEventListener("click", () => {
-        const nextMode = button.dataset.mode;
-        if (nextMode === "review") {
-          openReviewDialog();
-          return;
-        }
-        state.mode = nextMode;
+        state.mode = button.dataset.mode;
         document.querySelectorAll(".modeBtn").forEach(item => {
           item.setAttribute("aria-pressed", String(item === button));
         });
         render();
+        if (state.mode === "review") {
+          state.reviewResults.clear();
+          renderReviewList();
+          reviewDialog.showModal();
+        }
       });
     });
-
-    function openReviewDialog() {
-      state.reviewResults.clear();
-      document.querySelectorAll(".modeBtn").forEach(item => {
-        item.setAttribute("aria-pressed", String(item.dataset.mode === "review"));
-      });
-      renderReviewList();
-      if (!reviewDialog.open) reviewDialog.showModal();
-    }
 
     document.querySelector("#closeReview").addEventListener("click", () => {
-      closeReviewDialog();
-    });
-
-    reviewDialog.addEventListener("cancel", event => {
-      event.preventDefault();
       closeReviewDialog();
     });
 
