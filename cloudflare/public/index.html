@@ -955,10 +955,9 @@
     }
     async function loadNotes() {
       setStatus("読込中");
-      try {
-        state.notes = (await api('/notes')).map(normalizeNote);
-        setStatus(`同期済 ${state.notes.length}件`);
-      } catch(e) { setStatus("読込失敗"); alert(e.message); }
+      const notes = (await api('/notes')).map(normalizeNote);
+      state.notes = notes;
+      setStatus(`同期済 ${state.notes.length}件`);
     }
     function refreshViews() {
       render(); renderCalendarShelf(); updateSampleButton();
@@ -983,6 +982,7 @@
       }, 15000);
     }
     async function saveNote(note) {
+      const previous = state.notes.map(item => ({ ...item }));
       setStatus("保存中");
       const payload = {
         id: note.id, text: note.text, kind: note.kind, layer: note.layer,
@@ -993,13 +993,25 @@
       try {
         await api('/notes', { method:'PUT', body: JSON.stringify(payload) });
         await loadNotes(); refreshViews();
-      } catch(e) { setStatus("保存失敗"); alert(e.message); await loadNotes(); refreshViews(); }
+      } catch(e) {
+        state.notes = previous;
+        refreshViews();
+        setStatus("保存失敗");
+        alert(e.message);
+        try { await loadNotes(); refreshViews(); } catch(syncError) { console.error('Recovery sync failed', syncError); }
+      }
     }
     async function deleteNote(id) {
+      const previous = state.notes.map(item => ({ ...item }));
       try {
         await api('/notes/' + encodeURIComponent(id), { method:'DELETE' });
         await loadNotes(); refreshViews();
-      } catch(e) { alert(e.message); }
+      } catch(e) {
+        state.notes = previous;
+        refreshViews();
+        alert(e.message);
+        try { await loadNotes(); refreshViews(); } catch(syncError) { console.error('Recovery sync failed', syncError); }
+      }
     }
 
     function render() {
