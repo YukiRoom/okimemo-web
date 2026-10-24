@@ -1,14 +1,23 @@
-// Protect this Worker (including preview and static assets) with Cloudflare Access.
-// Restrict the Access policy to the single intended user before publishing.
+import { jwtVerify, createRemoteJWKSet } from 'jose';
+// Require a signed Cloudflare Access JWT on every request, including static assets.
+// Fail closed until all three environment variables are configured.
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}});
 export default {
  async fetch(request,env,ctx){
   const url=new URL(request.url);
+  if(!env.TEAM_DOMAIN || !env.POLICY_AUD || !env.ALLOWED_EMAIL || !env.DB) return json({error:'Application not configured'},503);
+  const token=request.headers.get('Cf-Access-Jwt-Assertion');
+  if(!token)return json({error:'Authentication required'},403);
+  let email;
+  try {
+   const team = new URL(env.TEAM_DOMAIN);
+   if(team.protocol!=='https:' || !team.hostname.endsWith('.cloudflareaccess.com')) throw new Error('invalid issuer');
+   const jwks=createRemoteJWKSet(new URL('/cdn-cgi/access/certs',team));
+   const {payload}=await jwtVerify(token,jwks,{issuer:team.origin,audience:env.POLICY_AUD,algorithms:['RS256']});
+   email=typeof payload.email==='string'?payload.email.toLowerCase():null;
+  }catch(e){console.error('Access JWT rejected',e.message);return json({error:'Invalid authentication'},403);}
+  if(email!==env.ALLOWED_EMAIL.toLowerCase())return json({error:'Forbidden'},403);
   if(!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
-  if(!ctx.access) return json({error:'Cloudflare Access authentication required'},401);
-  const identity=await ctx.access.getIdentity();
-  const email=identity?.email?.toLowerCase();
-  if(!email || !env.ALLOWED_EMAIL || email!==env.ALLOWED_EMAIL.toLowerCase()) return json({error:'Forbidden'},403);
   const user=email;
   try {
    if(url.pathname==='/api/me' && request.method==='GET') return json({id:user,email});
