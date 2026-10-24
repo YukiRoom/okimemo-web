@@ -26,7 +26,8 @@ export default {
     return json(results.map(n=>({...n,done:!!n.done,important:!!n.important})));
    }
    if(url.pathname==='/api/notes' && request.method==='PUT'){
-    const n=await request.json();
+    let n;
+    try { n=await request.json(); } catch { return json({error:'Invalid JSON'},400); }
     if(typeof n.id!=='string'||!n.id||n.id.length>150||typeof n.text!=='string'||n.text.length>100000) return json({error:'Invalid note'},400);
     const now=new Date().toISOString();
     // Existing owner cannot be overwritten by another user.
@@ -34,6 +35,7 @@ export default {
     if(existing && existing.user_id!==user)return json({error:'Forbidden'},403);
     const allowedKind=['action','waiting','idea','memo'],allowedLayer=['today','soon','outside','memo','warehouse'];
     if(!allowedKind.includes(n.kind)||!allowedLayer.includes(n.layer))return json({error:'Invalid category'},400);
+    if(n.deadline!==null && n.deadline!==undefined && (typeof n.deadline!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(n.deadline))) return json({error:'Invalid deadline'},400);
     await env.DB.prepare(`INSERT INTO notes(id,user_id,text,kind,layer,done,important,deadline,created_at,updated_at)
     VALUES(?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(id) DO UPDATE SET text=excluded.text,kind=excluded.kind,layer=excluded.layer,
@@ -42,7 +44,9 @@ export default {
     return json({ok:true});
    }
    if(url.pathname.startsWith('/api/notes/') && request.method==='DELETE'){
-    const id=decodeURIComponent(url.pathname.slice('/api/notes/'.length));
+    let id;
+    try { id=decodeURIComponent(url.pathname.slice('/api/notes/'.length)); } catch { return json({error:'Invalid note id'},400); }
+    if(!id || id.length>150) return json({error:'Invalid note id'},400);
     await env.DB.prepare('DELETE FROM notes WHERE id=? AND user_id=?').bind(id,user).run();
     return json({ok:true});
    }
