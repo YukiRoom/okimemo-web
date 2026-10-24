@@ -12,7 +12,7 @@
 2. `ALLOWED_EMAIL`:本人のメール、`TEAM_DOMAIN`: https://TEAM.cloudflareaccess.com 、`POLICY_AUD`: Access application Audienceタグを設定。
 3. Cloudflare Accessのscopeは **All traffic**、本人だけを許可。
 4. Workers Buildsのroot Pathは `/cloudflare`、worker project nameは `okimemo-web`。**本番ブランチを `feat/cloudflare-d1-migration` に設定できるまでDeployしない**。ブランチ制御は作成後 Settings > Build > Branch control で変更可能。
-5. GitHub連携のbuildコマンドは `npm ci`、deployは `npx wrangler deploy`。tokenやconfigを適切に設定。
+5. GitHub連携のbuildコマンドは `npm install`（ロックファイル作成・固定は本番前に実施）、deployは `npx wrangler deploy`。tokenやconfigを適切に設定。
 6. DBスキーマはCloudflareコンソールで適用済みのため、再適用は不要（`schema.sql` は再現用）。
 7. 別端末同期、認証、APIエラー、編集・削除の確認完了まで旧版を維持。
 
