@@ -953,11 +953,14 @@
       state.subscription = null;
       appView.classList.add("hidden"); authView.classList.remove("hidden");
     }
-    async function loadNotes() {
-      setStatus("読込中");
+    async function loadNotes({ silent = false } = {}) {
+      if (!silent) setStatus("読込中");
       const notes = (await api('/notes')).map(normalizeNote);
-      state.notes = notes;
-      setStatus(`同期済 ${state.notes.length}件`);
+      // Compare the full note contents, not just the count, to detect edits on other devices.
+      const changed = JSON.stringify(notes) !== JSON.stringify(state.notes);
+      if (changed) state.notes = notes;
+      if (!silent || changed) setStatus(`同期済 ${state.notes.length}件`);
+      return changed;
     }
     function refreshViews() {
       render(); renderCalendarShelf(); updateSampleButton();
@@ -977,8 +980,13 @@
     function subscribeNotes() {
       if (state.subscription) clearInterval(state.subscription);
       state.subscription = setInterval(async () => {
-        if (document.visibilityState !== 'visible') return;
-        try { await loadNotes(); refreshViews(); } catch(e) { console.error(e); }
+        if (document.visibilityState !== 'visible' || state.editingId || state.draggedId ||
+            editDialog.open || doneDialog.open || reviewDialog.open || calendarDialog.open ||
+            document.activeElement?.matches('input, textarea, [contenteditable="true"]')) return;
+        try {
+          // Keep checking every 15 seconds, but do not rebuild the board unless data changed.
+          if (await loadNotes({ silent: true })) refreshViews();
+        } catch (e) { console.error(e); }
       }, 15000);
     }
     async function saveNote(note) {
