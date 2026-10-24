@@ -644,7 +644,7 @@
   </style>
 </head>
 <body>
-  <section class="authShell" id="authView">
+  <section class="authShell hidden" id="authView">
     <div class="authCard">
       <h1>置きメモ</h1>
       <p>ログインすると、スマホとPCで同じ付箋を確認できます。データはログイン中の本人分だけ読み書きします。</p>
@@ -936,7 +936,7 @@
       try {
         const user = await api('/me');
         await enterApp(user);
-      } catch (e) { authStatus.textContent = 'Cloudflare Accessの認証を確認してください: ' + e.message; }
+      } catch (e) { authView.classList.remove('hidden'); authStatus.textContent = 'Cloudflare Accessの認証を確認してください: ' + e.message; }
     }
     async function enterApp(user) {
       state.user = user;
